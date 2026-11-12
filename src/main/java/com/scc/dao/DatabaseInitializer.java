@@ -1,142 +1,205 @@
 
 package com.scc.dao;
 
-import com.scc.model.Role;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 public class DatabaseInitializer {
-
-    private DatabaseInitializer() {
-    }
 
     public static void initialize() {
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(usersTable());
+            // ==========================================
+            // USERS TABLE
+            // ==========================================
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS foods (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    category TEXT,
-                    price REAL NOT NULL CHECK(price >= 0),
-                    available INTEGER DEFAULT 1
-                )
-            """);
+            String usersTable = """
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL UNIQUE,
+                        password TEXT NOT NULL,
+                        roles TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING'
+                    )
+                    """;
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS catering_packages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    price REAL NOT NULL CHECK(price >= 0),
-                    guest_limit INTEGER NOT NULL,
-                    available INTEGER DEFAULT 1
-                )
-            """);
+            stmt.execute(usersTable);
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS orders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    customer_id INTEGER NOT NULL,
-                    staff_id INTEGER,
-                    package_id INTEGER,
-                    order_date TEXT DEFAULT CURRENT_TIMESTAMP,
-                    total_amount REAL DEFAULT 0,
-                    status TEXT DEFAULT 'PENDING',
-                    FOREIGN KEY(customer_id) REFERENCES users(id),
-                    FOREIGN KEY(staff_id) REFERENCES users(id),
-                    FOREIGN KEY(package_id) REFERENCES catering_packages(id)
-                )
-            """);
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS order_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    order_id INTEGER NOT NULL,
-                    food_id INTEGER NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    unit_price REAL NOT NULL,
-                    subtotal REAL NOT NULL,
-                    FOREIGN KEY(order_id) REFERENCES orders(id),
-                    FOREIGN KEY(food_id) REFERENCES foods(id)
-                )
-            """);
+            // ==========================================
+            // FOODS TABLE
+            // ==========================================
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS reservations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    customer_id INTEGER NOT NULL,
-                    staff_id INTEGER,
-                    package_id INTEGER,
-                    event_name TEXT NOT NULL,
-                    event_date TEXT NOT NULL,
-                    event_time TEXT NOT NULL,
-                    event_location TEXT NOT NULL,
-                    guest_count INTEGER NOT NULL,
-                    total_amount REAL DEFAULT 0,
-                    status TEXT DEFAULT 'PENDING',
-                    FOREIGN KEY(customer_id) REFERENCES users(id),
-                    FOREIGN KEY(staff_id) REFERENCES users(id),
-                    FOREIGN KEY(package_id) REFERENCES catering_packages(id)
-                )
-            """);
+            String foodsTable = """
+                    CREATE TABLE IF NOT EXISTS foods (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        category TEXT,
+                        price REAL NOT NULL,
+                        available INTEGER DEFAULT 1
+                    )
+                    """;
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS payments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    order_id INTEGER,
-                    reservation_id INTEGER,
-                    amount REAL NOT NULL CHECK(amount > 0),
-                    payment_method TEXT NOT NULL,
-                    payment_date TEXT DEFAULT CURRENT_TIMESTAMP,
-                    status TEXT DEFAULT 'PAID',
-                    FOREIGN KEY(order_id) REFERENCES orders(id),
-                    FOREIGN KEY(reservation_id) REFERENCES reservations(id),
-                    CHECK(order_id IS NOT NULL OR reservation_id IS NOT NULL)
-                )
-            """);
+            stmt.execute(foodsTable);
 
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS inventory (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    item_name TEXT NOT NULL UNIQUE,
-                    quantity REAL DEFAULT 0,
-                    unit TEXT NOT NULL,
-                    minimum_stock REAL DEFAULT 0
-                )
-            """);
+
+            // ==========================================
+            // CATERING PACKAGES TABLE
+            // ==========================================
+
+            String packagesTable = """
+                    CREATE TABLE IF NOT EXISTS catering_packages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        price REAL NOT NULL,
+                        guest_limit INTEGER,
+                        available INTEGER DEFAULT 1
+                    )
+                    """;
+
+            stmt.execute(packagesTable);
+
+
+            // ==========================================
+            // INVENTORY TABLE
+            // ==========================================
+
+            String inventoryTable = """
+                    CREATE TABLE IF NOT EXISTS inventory (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        item_name TEXT NOT NULL,
+                        quantity REAL NOT NULL,
+                        unit TEXT,
+                        minimum_stock REAL DEFAULT 0
+                    )
+                    """;
+
+            stmt.execute(inventoryTable);
+
+
+            // ==========================================
+            // ORDERS TABLE
+            // ==========================================
+
+            String ordersTable = """
+                    CREATE TABLE IF NOT EXISTS orders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        customer_id INTEGER NOT NULL,
+                        staff_id INTEGER,
+                        package_id INTEGER,
+                        order_date TEXT,
+                        total_amount REAL NOT NULL,
+                        status TEXT DEFAULT 'PENDING'
+                    )
+                    """;
+
+            stmt.execute(ordersTable);
+
+
+            // ==========================================
+            // ORDER ITEMS TABLE
+            // ==========================================
+
+            String orderItemsTable = """
+                    CREATE TABLE IF NOT EXISTS order_items (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        order_id INTEGER NOT NULL,
+                        food_id INTEGER NOT NULL,
+                        quantity INTEGER NOT NULL,
+                        unit_price REAL NOT NULL,
+                        subtotal REAL NOT NULL
+                    )
+                    """;
+
+            stmt.execute(orderItemsTable);
+
+
+            // ==========================================
+            // RESERVATIONS TABLE
+            // ==========================================
+
+            String reservationsTable = """
+                    CREATE TABLE IF NOT EXISTS reservations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        customer_id INTEGER NOT NULL,
+                        staff_id INTEGER,
+                        package_id INTEGER,
+                        event_name TEXT NOT NULL,
+                        event_date TEXT NOT NULL,
+                        event_time TEXT,
+                        event_location TEXT,
+                        guest_count INTEGER,
+                        total_amount REAL,
+                        status TEXT DEFAULT 'PENDING'
+                    )
+                    """;
+
+            stmt.execute(reservationsTable);
+
+
+            // ==========================================
+            // PAYMENTS TABLE
+            // ==========================================
+
+            String paymentsTable = """
+                    CREATE TABLE IF NOT EXISTS payments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        order_id INTEGER,
+                        reservation_id INTEGER,
+                        amount REAL NOT NULL,
+                        payment_method TEXT,
+                        payment_date TEXT,
+                        status TEXT DEFAULT 'PENDING'
+                    )
+                    """;
+
+            stmt.execute(paymentsTable);
+
+
+            // ==========================================
+            // ACTIVITY LOGS TABLE
+            // DELIVERABLE 8
+            // ==========================================
+
+            String activityLogsTable = """
+                    CREATE TABLE IF NOT EXISTS activity_logs (
+                        log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        action_type TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        timestamp TEXT NOT NULL
+                            DEFAULT (datetime('now', 'localtime'))
+                    )
+                    """;
+
+            stmt.execute(activityLogsTable);
+
+
+            // ==========================================
+            // ACTIVITY LOGS INDEX
+            // ==========================================
+
+            String activityLogsIndex = """
+                    CREATE INDEX IF NOT EXISTS idx_activity_logs_user
+                    ON activity_logs(user_id)
+                    """;
+
+            stmt.execute(activityLogsIndex);
+
 
             System.out.println("Database initialized successfully!");
 
         } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Database initialization failed: " + e.getMessage(), e);
+
+            System.out.println(
+                    "Database initialization error: " + e.getMessage()
+            );
+
         }
-    }
-
-    private static String usersTable() {
-
-        String roles = Arrays.stream(Role.values())
-                .map(r -> "'" + r.name() + "'")
-                .collect(Collectors.joining(", "));
-
-        return """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                roles TEXT NOT NULL CHECK(roles IN (%s)),
-                status TEXT NOT NULL DEFAULT 'PENDING'
-            )
-        """.formatted(roles);
     }
 }
